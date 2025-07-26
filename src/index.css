@@ -1,6 +1,11 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 body {
   margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+  font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
     'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
     sans-serif;
   -webkit-font-smoothing: antialiased;
@@ -10,4 +15,109 @@ body {
 code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;
+}
+
+/* Fix Material-UI input field styling conflicts with Tailwind */
+.MuiTextField-root .MuiOutlinedInput-root {
+  border-radius: 4px;
+}
+
+.MuiTextField-root .MuiOutlinedInput-root .MuiOutlinedInput-notchedOutline {
+  border-color: rgba(0, 0, 0, 0.23);
+  border-width: 1px;
+  border-style: solid;
+}
+
+.MuiTextField-root .MuiOutlinedInput-root:hover .MuiOutlinedInput-notchedOutline {
+  border-color: rgba(0, 0, 0, 0.87);
+}
+
+.MuiTextField-root .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline {
+  border-color: #1976d2;
+  border-width: 2px;
+}
+
+.MuiTextField-root .MuiOutlinedInput-root.Mui-error .MuiOutlinedInput-notchedOutline {
+  border-color: #d32f2f;
+}
+
+.MuiTextField-root .MuiOutlinedInput-input {
+  padding: 16.5px 14px;
+  font-family: 'Poppins', sans-serif;
+}
+
+/* Fix for filled variant */
+.MuiTextField-root .MuiFilledInput-root {
+  background-color: rgba(0, 0, 0, 0.06);
+  border-top-left-radius: 4px;
+  border-top-right-radius: 4px;
+}
+
+.MuiTextField-root .MuiFilledInput-root:hover {
+  background-color: rgba(0, 0, 0, 0.09);
+}
+
+.MuiTextField-root .MuiFilledInput-root.Mui-focused {
+  background-color: rgba(0, 0, 0, 0.06);
+}
+
+.MuiTextField-root .MuiFilledInput-underline:before {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.42);
+}
+
+.MuiTextField-root .MuiFilledInput-underline:hover:before {
+  border-bottom: 2px solid rgba(0, 0, 0, 0.87);
+}
+
+.MuiTextField-root .MuiFilledInput-underline:after {
+  border-bottom: 2px solid #1976d2;
+}
+
+/* Fix for standard variant */
+.MuiTextField-root .MuiInput-underline:before {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.42);
+}
+
+.MuiTextField-root .MuiInput-underline:hover:before {
+  border-bottom: 2px solid rgba(0, 0, 0, 0.87);
+}
+
+.MuiTextField-root .MuiInput-underline:after {
+  border-bottom: 2px solid #1976d2;
+}
+
+/* Fix for select dropdowns */
+.MuiSelect-root {
+  background: transparent;
+}
+
+.MuiSelect-outlined {
+  padding: 16.5px 14px;
+}
+
+/* Fix autocomplete styling */
+.MuiAutocomplete-root .MuiOutlinedInput-root {
+  padding: 0;
+}
+
+.MuiAutocomplete-root .MuiOutlinedInput-root .MuiAutocomplete-input {
+  padding: 16.5px 14px;
+}
+
+@media print {
+  body, .PrintableBill, .printable-bill {
+    background: #fff !important;
+    color: #000 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  .PrintableBill * {
+    color: #000 !important;
+    background: #fff !important;
+    border-color: #000 !important;
+  }
+  /* Hide watermark and any colored elements for print */
+  .bill-watermark {
+    display: none !important;
+  }
 }

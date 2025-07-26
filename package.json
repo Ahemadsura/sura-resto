@@ -1,8 +1,18 @@
 {
   "name": "sura-resto",
-  "version": "0.1.0",
+  "version": "1.0.0",
+  "description": "SURA Restaurant Billing System - A comprehensive restaurant management and billing application",
+  "author": "SURA Team",
   "private": true,
+  "homepage": ".",
   "dependencies": {
+    "@emotion/react": "^11.14.0",
+    "@emotion/styled": "^11.14.0",
+    "@mui/icons-material": "^7.1.1",
+    "@mui/material": "^7.1.1",
+    "@mui/x-charts": "^8.5.1",
+    "@sentry/electron": "^6.8.0",
+    "@sentry/react": "^9.34.0",
     "@testing-library/dom": "^10.4.0",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.3.0",
@@ -11,9 +21,21 @@
     "@types/node": "^16.18.126",
     "@types/react": "^19.1.6",
     "@types/react-dom": "^19.1.6",
-    "react": "^19.1.0",
-    "react-dom": "^19.1.0",
-    "react-scripts": "5.0.1",
+    "electron-log": "^5.4.1",
+    "electron-store": "^8.2.0",
+    "electron-updater": "^6.6.2",
+    "firebase": "^11.9.0",
+    "firebase-admin": "^13.4.0",
+    "is-online": "^11.0.0",
+    "jspdf": "^3.0.1",
+    "jspdf-autotable": "^5.0.2",
+    "papaparse": "^5.4.1",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-router-dom": "^7.6.2",
+    "react-scripts": "^5.0.1",
+    "react-to-print": "^3.1.0",
+    "recharts": "^2.15.3",
     "typescript": "^4.9.5",
     "web-vitals": "^2.1.4"
   },
@@ -21,13 +43,16 @@
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
-    "eject": "react-scripts eject"
-  },
-  "eslintConfig": {
-    "extends": [
-      "react-app",
-      "react-app/jest"
-    ]
+    "eject": "react-scripts eject",
+    "firebase": "firebase",
+    "deploy": "npm run build && firebase deploy",
+    "dev": "vite",
+    "preview": "vite preview",
+    "electron": "electron .",
+    "dist": "npm run build && electron-builder --win --x64 --publish never",
+    "build:desktop": "npm run build && electron-builder --win --x64 --publish never",
+    "electron:dev": "electron .",
+    "package": "electron-builder --win"
   },
   "browserslist": {
     "production": [
@@ -40,5 +65,70 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
+  },
+  "devDependencies": {
+    "@tailwindcss/forms": "^0.5.10",
+    "@types/papaparse": "^5.2.6",
+    "autoprefixer": "^10.4.21",
+    "electron": "^28.2.3",
+    "electron-builder": "^24.13.3",
+    "firebase-tools": "^14.6.0",
+    "postcss": "^8.5.6",
+    "tailwindcss": "^3.4.17"
+  },
+  "main": "main.js",
+  "build": {
+    "appId": "com.sura.restaurantbilling",
+    "productName": "SURA-RESTO by SURA",
+    "files": [
+      "build/**/*",
+      "main.js",
+      "src/preload.js",
+      "node_modules/**/*",
+      "package.json"
+    ],
+    "asarUnpack": [
+      "**/electron-log/**"
+    ],
+    "directories": {
+      "output": "dist-electron"
+    },
+    "extraMetadata": {
+      "main": "main.js"
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "allowElevation": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "SURA-RESTO by SURA",
+      "artifactName": "SURA-RESTO-by-SURA-Setup-${version}.exe"
+    },
+    "portable": {
+      "artifactName": "SURA-RESTO-by-SURA-${version}-portable.exe"
+    },
+    "compression": "store",
+    "removePackageScripts": true,
+    "afterSign": null,
+    "afterAllArtifactBuild": null,
+    "forceCodeSigning": false,
+    "buildDependenciesFromSource": false
   }
 }

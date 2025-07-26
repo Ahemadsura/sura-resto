@@ -1,46 +1,256 @@
-# Getting Started with Create React App
+# SURA-Resto - Restaurant AI Agent System
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+A comprehensive restaurant management system built with React, TypeScript, Firebase, and Material UI.
 
-## Available Scripts
+## Features
 
-In the project directory, you can run:
+### 🔐 Authentication System
+- Role-based login (Owner/Manager)
+- Firebase Authentication
+- Protected routes with role verification
 
-### `npm start`
+### 👨‍💼 Manager Dashboard
+- **Billing System**
+  - MUI Autocomplete for item search by name or number
+  - Customer type selection (Private/Loading)
+  - Auto total price calculation
+  - Real-time bill creation and management
+- **Inventory Management**
+  - Search and add items to bills
+  - Quantity management
+  - Price differentiation based on customer type
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
+### 👑 Owner Dashboard
+- **Revenue Analytics**
+  - Daily/Monthly revenue charts
+  - Total revenue tracking
+  - Bills count analytics
+  - Interactive charts using MUI X Charts
+- **Menu Management**
+  - Add/Update/Delete menu items
+  - Each item includes: Item No, Name, Private Price, Loading Price
+  - Full CRUD operations with Firestore
 
-The page will reload if you make edits.\
-You will also see any lint errors in the console.
+### 🛠️ Technical Features
+- **Firebase Integration**
+  - Firestore for data storage
+  - Firebase Authentication
+  - Firebase Hosting ready
+- **Modern UI/UX**
+  - Material UI components
+  - Responsive design
+  - Professional theming
+  - Loading states and error handling
 
-### `npm test`
+## Technology Stack
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+- **Frontend**: React 18 + TypeScript
+- **UI Library**: Material UI (MUI)
+- **Charts**: MUI X Charts
+- **Backend**: Firebase (Auth + Firestore)
+- **Hosting**: Firebase Hosting
+- **Routing**: React Router DOM
 
-### `npm run build`
+## Getting Started
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+### Prerequisites
+- Node.js (v14 or higher)
+- npm or yarn
+- Firebase account
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+### Installation
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+1. **Clone and setup**
+   ```bash
+   cd sura-resto
+   npm install
+   ```
 
-### `npm run eject`
+2. **Firebase Setup**
+   
+   a. Create a Firebase project at [Firebase Console](https://console.firebase.google.com)
+   
+   b. Enable Authentication and Firestore
+   
+   c. Update Firebase configuration in `src/config/firebase.ts`:
+   ```typescript
+   const firebaseConfig = {
+     apiKey: "your-api-key",
+     authDomain: "your-project.firebaseapp.com",
+     projectId: "your-project-id",
+     storageBucket: "your-project.appspot.com",
+     messagingSenderId: "123456789",
+     appId: "your-app-id"
+   };
+   ```
+   
+   d. Update project ID in `.firebaserc`:
+   ```json
+   {
+     "projects": {
+       "default": "your-project-id"
+     }
+   }
+   ```
 
-**Note: this is a one-way operation. Once you `eject`, you can’t go back!**
+3. **Create Users in Firebase Console**
+   
+   Go to Firebase Console > Authentication > Users and create:
+   - Manager user with email/password
+   - Owner user with email/password
+   
+   Then add user documents in Firestore:
+   ```
+   Collection: users
+   Document ID: [user-uid]
+   Data: {
+     email: "user@example.com",
+     role: "manager" // or "owner"
+   }
+   ```
 
-If you aren’t satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+4. **Start Development Server**
+   ```bash
+   npm start
+   ```
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you’re on your own.
+### Firebase Deployment
 
-You don’t have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn’t feel obligated to use this feature. However we understand that this tool wouldn’t be useful if you couldn’t customize it when you are ready for it.
+1. **Install Firebase CLI**
+   ```bash
+   npm install -g firebase-tools
+   ```
 
-## Learn More
+2. **Login to Firebase**
+   ```bash
+   firebase login
+   ```
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+3. **Build and Deploy**
+   ```bash
+   npm run build
+   firebase deploy
+   ```
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+## Usage
+
+### Login
+1. Select role (Owner/Manager)
+2. Enter email and password
+3. System will verify role and redirect to appropriate dashboard
+
+### Manager Dashboard
+1. **Create Bills**
+   - Search items using autocomplete
+   - Select customer type (Private/Loading)
+   - Add items with quantities
+   - Review bill summary
+   - Save completed bills
+
+### Owner Dashboard
+1. **View Analytics**
+   - Check revenue charts
+   - Monitor daily/monthly performance
+   - Track total revenue and bill counts
+
+2. **Manage Menu**
+   - Add new menu items
+   - Edit existing items
+   - Delete items
+   - Set different prices for Private/Loading customers
+
+## Firestore Data Structure
+
+### Collections
+
+**users**
+```json
+{
+  "uid": "string",
+  "email": "string",
+  "role": "owner" | "manager"
+}
+```
+
+**menuItems**
+```json
+{
+  "itemNo": "string",
+  "name": "string",
+  "privatePrice": "number",
+  "loadingPrice": "number",
+  "createdAt": "timestamp",
+  "updatedAt": "timestamp"
+}
+```
+
+**bills**
+```json
+{
+  "items": [
+    {
+      "menuItem": "MenuItem object",
+      "quantity": "number",
+      "customerType": "private" | "loading"
+    }
+  ],
+  "customerType": "private" | "loading",
+  "totalAmount": "number",
+  "createdAt": "timestamp",
+  "createdBy": "string (user uid)"
+}
+```
+
+## Security Rules
+
+Add these Firestore security rules:
+
+```javascript
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Users can only read their own user document
+    match /users/{userId} {
+      allow read: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Menu items - owners can CRUD, managers can read
+    match /menuItems/{document} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && 
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'owner';
+    }
+    
+    // Bills - managers can create, owners can read all
+    match /bills/{document} {
+      allow create: if request.auth != null && 
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'manager';
+      allow read: if request.auth != null;
+    }
+  }
+}
+```
+
+## Scripts
+
+- `npm start` - Start development server
+- `npm run build` - Build for production
+- `npm test` - Run tests
+- `firebase deploy` - Deploy to Firebase Hosting
+- `firebase serve` - Serve locally with Firebase
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Commit your changes
+4. Push to the branch
+5. Create a Pull Request
+
+## License
+
+This project is licensed under the MIT License.
+
+## Support
+
+For support, email support@sura-resto.com or create an issue in the repository.
