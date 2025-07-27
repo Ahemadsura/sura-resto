@@ -22,3 +22,7 @@
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+
+# Ignore all exe and asar files inside dist-electron/win-unpacked
+dist-electron/win-unpacked/*.exe
+dist-electron/win-unpacked/resources/*.asar
