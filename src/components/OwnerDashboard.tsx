@@ -393,7 +393,7 @@ const OwnerDashboard: React.FC = () => {
         return {
           start: today,
           end: endOfDay,
-          label: `Today (${today.toLocaleDateString()})`
+          label: `Today (${today.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })})`
         };
       case 'yesterday':
         const yesterday = new Date(today);
@@ -403,7 +403,7 @@ const OwnerDashboard: React.FC = () => {
         return {
           start: yesterday,
           end: endOfYesterday,
-          label: `Yesterday (${yesterday.toLocaleDateString()})`
+          label: `Yesterday (${yesterday.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })})`
         };
       
       case 'week':
@@ -415,7 +415,7 @@ const OwnerDashboard: React.FC = () => {
         return {
           start: startOfWeek,
           end: endOfWeek,
-          label: `This Week (${startOfWeek.toLocaleDateString()} - ${endOfWeek.toLocaleDateString()})`
+          label: `This Week (${startOfWeek.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })} - ${endOfWeek.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })})`
         };
       
       case 'month':
@@ -425,7 +425,7 @@ const OwnerDashboard: React.FC = () => {
         return {
           start: startOfMonth,
           end: endOfMonth,
-          label: `This Month (${startOfMonth.toLocaleDateString()} - ${endOfMonth.toLocaleDateString()})`
+          label: `This Month (${startOfMonth.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })} - ${endOfMonth.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })})`
         };
       
       case 'year':
@@ -435,7 +435,7 @@ const OwnerDashboard: React.FC = () => {
         return {
           start: startOfYear,
           end: endOfYear,
-          label: `This Year (${startOfYear.toLocaleDateString()} - ${endOfYear.toLocaleDateString()})`
+          label: `This Year (${startOfYear.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })} - ${endOfYear.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })})`
         };
       
       case 'custom':
@@ -445,7 +445,7 @@ const OwnerDashboard: React.FC = () => {
         return {
           start: startOfCustomMonth,
           end: endOfCustomMonth,
-          label: `${startOfCustomMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })} (${startOfCustomMonth.toLocaleDateString()} - ${endOfCustomMonth.toLocaleDateString()})`
+          label: `${startOfCustomMonth.toLocaleDateString('en-GB', { month: 'short', year: 'numeric' })} (${startOfCustomMonth.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })} - ${endOfCustomMonth.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })})`
         };
       
       case 'customYear':
@@ -455,7 +455,7 @@ const OwnerDashboard: React.FC = () => {
         return {
           start: startOfCustomYear,
           end: endOfCustomYear,
-          label: `${customDate.year} (${startOfCustomYear.toLocaleDateString()} - ${endOfCustomYear.toLocaleDateString()})`
+          label: `${customDate.year} (${startOfCustomYear.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })} - ${endOfCustomYear.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })})`
         };
       
       case 'customDay': {
@@ -470,9 +470,9 @@ const OwnerDashboard: React.FC = () => {
         return {
           start: startOfCustomDay,
           end: endOfCustomDay,
-          label: `${startOfCustomDay.toLocaleDateString('en-US', { 
-            day: 'numeric', 
-            month: 'long', 
+          label: `${startOfCustomDay.toLocaleDateString('en-GB', { 
+            day: '2-digit', 
+            month: 'short', 
             year: 'numeric' 
           })}`
         };
@@ -485,7 +485,7 @@ const OwnerDashboard: React.FC = () => {
           return {
             start: startDate,
             end: endDate,
-            label: `Custom Range (${startDate.toLocaleDateString()} - ${endDate.toLocaleDateString()})`
+            label: `Custom Range (${startDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })} - ${endDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })})`
           };
         }
         // Fall back to today if dates not set
@@ -2022,64 +2022,169 @@ const OwnerDashboard: React.FC = () => {
     const { start, end, label } = getDateRange(dateFilter);
     const currentDate = new Date().toLocaleDateString();
 
-    // Create a formatted text report with better layout
-    const reportContent = `
-SURA-RESTO REVENUE ANALYTICS REPORT
-====================================
-
-Restaurant: ${profile.name || 'SURA-RESTO by SURA'}
-Period: ${label}
-Generated on: ${currentDate}
-
-REVENUE & EXPENSE SUMMARY
-=========================
-
-REVENUE (Left Side)                    EXPENSES (Right Side)
--------------------                    ---------------------
-Total Revenue: ₹${analyticsData.totalRevenue.toLocaleString()}     Raw Material: ₹${(analyticsData.rawMaterialExpense || 0).toLocaleString()}
-Total Orders: ${analyticsData.totalBills}                          Upad: ₹${(analyticsData.upadAsExpense || 0).toLocaleString()}
-Average Order Value: ₹${analyticsData.avgBillValue.toFixed(0)}     Staff Salary: ₹${analyticsData.staffSalaryExpense.toLocaleString()}
-${['month', 'custom'].includes(dateFilter) ? `Average Day Revenue: ₹${analyticsData.avgDayRevenue.toFixed(0)}` : ''}${['month', 'custom'].includes(dateFilter) ? ' '.repeat(40) : ''}${['month', 'custom'].includes(dateFilter) ? 'Other Expenses: ₹0' : ''}
-${['year', 'customYear'].includes(dateFilter) ? `Average Month Revenue: ₹${analyticsData.avgMonthRevenue.toFixed(0)}` : ''}${['year', 'customYear'].includes(dateFilter) ? ' '.repeat(40) : ''}${['year', 'customYear'].includes(dateFilter) ? 'Other Expenses: ₹0' : ''}
-
-PROFIT ANALYSIS
-===============
-Net Profit: ${analyticsData.netProfit > 0 ? '+' : analyticsData.netProfit < 0 ? '-' : ''}₹${Math.abs(analyticsData.netProfit).toLocaleString()}
-Profit Margin: ${analyticsData.profitMargin.toFixed(1)}%
-
-${analyticsData.topSellingItems.length > 0 ? `
-TOP SELLING ITEMS:
-------------------
-${analyticsData.topSellingItems.map((item, index) => 
-  `${index + 1}. ${item.name} - Quantity: ${item.quantity}, Revenue: ₹${item.revenue.toLocaleString()}`
-).join('\n')}
-` : ''}
-
-EXPENSE BREAKDOWN
-=================
-Raw Material Expenses: ₹${(analyticsData.rawMaterialExpense || 0).toLocaleString()}
-Upad Expenses: ₹${(analyticsData.upadAsExpense || 0).toLocaleString()}
-Staff Salary Expenses: ₹${analyticsData.staffSalaryExpense.toLocaleString()}
-Other Expenses: ₹0
-----------------------------------------
-TOTAL EXPENSES: ₹${analyticsData.totalExpenses.toLocaleString()}
-
-Generated by SURA-RESTO Analytics System
-For support, contact your system administrator
+    // Create a beautiful HTML report
+    const htmlContent = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>${profile.name || 'SURA-RESTO by SURA'} - Revenue Analytics Report</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; background: #f8f9fa; }
+        .container { max-width: 1200px; margin: 0 auto; background: white; box-shadow: 0 0 20px rgba(0,0,0,0.1); }
+        .header { background: linear-gradient(135deg, #7B2CBF 0%, #9B4DDB 100%); color: white; padding: 40px; text-align: center; }
+        .header h1 { font-size: 2.5rem; font-weight: 700; margin-bottom: 10px; }
+        .header p { font-size: 1.2rem; opacity: 0.9; }
+        .period-info { background: #f8f9fa; padding: 20px; text-align: center; border-bottom: 1px solid #e9ecef; }
+        .period-info h2 { color: #7B2CBF; font-size: 1.5rem; margin-bottom: 10px; }
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; padding: 30px; background: white; }
+        .stat-card { background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%); border: 1px solid #e9ecef; border-radius: 12px; padding: 25px; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+        .stat-number { font-size: 2.5rem; font-weight: 700; color: #7B2CBF; margin-bottom: 10px; }
+        .stat-label { font-size: 1rem; color: #666; font-weight: 500; }
+        .section { padding: 30px; border-bottom: 1px solid #e9ecef; }
+        .section-title { font-size: 1.8rem; color: #7B2CBF; margin-bottom: 20px; }
+        .profit-section { background: linear-gradient(135deg, #e8f5e8 0%, #c8e6c9 100%); padding: 30px; border-bottom: 1px solid #e9ecef; }
+        .profit-title { font-size: 1.8rem; color: #2e7d32; margin-bottom: 20px; }
+        .profit-value { font-size: 2.5rem; font-weight: 700; color: #2e7d32; margin-bottom: 10px; }
+        .profit-margin { font-size: 1.2rem; color: #4caf50; }
+        .items-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 15px; margin-top: 20px; }
+        .item-card { background: white; border: 1px solid #e9ecef; border-radius: 8px; padding: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .item-name { font-weight: 600; color: #7B2CBF; margin-bottom: 5px; }
+        .item-details { color: #666; font-size: 0.9rem; }
+        .footer { background: #2c3e50; color: white; padding: 30px; text-align: center; }
+        .footer p { margin-bottom: 10px; }
+        .generated-date { font-size: 0.9rem; opacity: 0.8; }
+        .revenue-expense-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-bottom: 30px; }
+        .revenue-card, .expense-card { background: white; border-radius: 12px; padding: 25px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+        .revenue-card { border-left: 4px solid #4caf50; }
+        .expense-card { border-left: 4px solid #f44336; }
+        .card-title { font-size: 1.2rem; font-weight: 600; margin-bottom: 15px; }
+        .revenue-card .card-title { color: #4caf50; }
+        .expense-card .card-title { color: #f44336; }
+        .amount { font-size: 1.5rem; font-weight: 700; margin-bottom: 5px; }
+        .label { color: #666; font-size: 0.9rem; }
+        @media print { body { background: white; } .container { box-shadow: none; } }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>${profile.name || 'SURA-RESTO by SURA'}</h1>
+            <p>Revenue Analytics Report</p>
+        </div>
+        
+        <div class="period-info">
+            <h2>📊 Report Period: ${label}</h2>
+            <p>Generated on: ${new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</p>
+        </div>
+        
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-number">₹${analyticsData.totalRevenue.toLocaleString()}</div>
+                <div class="stat-label">Total Revenue</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">${analyticsData.totalBills}</div>
+                <div class="stat-label">Total Orders</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">₹${analyticsData.avgBillValue.toFixed(0)}</div>
+                <div class="stat-label">Average Order Value</div>
+            </div>
+            ${['month', 'custom'].includes(dateFilter) ? `
+            <div class="stat-card">
+                <div class="stat-number">₹${analyticsData.avgDayRevenue.toFixed(0)}</div>
+                <div class="stat-label">Average Day Revenue</div>
+            </div>
+            ` : ''}
+            ${['year', 'customYear'].includes(dateFilter) ? `
+            <div class="stat-card">
+                <div class="stat-number">₹${analyticsData.avgMonthRevenue.toFixed(0)}</div>
+                <div class="stat-label">Average Month Revenue</div>
+            </div>
+            ` : ''}
+        </div>
+        
+        <div class="revenue-expense-grid">
+            <div class="revenue-card">
+                <div class="card-title">💰 Revenue Summary</div>
+                <div class="amount">₹${analyticsData.totalRevenue.toLocaleString()}</div>
+                <div class="label">Total Revenue</div>
+            </div>
+            <div class="expense-card">
+                <div class="card-title">📉 Expense Summary</div>
+                <div class="amount">₹${analyticsData.totalExpenses.toLocaleString()}</div>
+                <div class="label">Total Expenses</div>
+            </div>
+        </div>
+        
+        <div class="profit-section">
+            <div class="profit-title">💹 Profit Analysis</div>
+            <div class="profit-value">${analyticsData.netProfit > 0 ? '+' : analyticsData.netProfit < 0 ? '-' : ''}₹${Math.abs(analyticsData.netProfit).toLocaleString()}</div>
+            <div class="profit-margin">Profit Margin: ${analyticsData.profitMargin.toFixed(1)}%</div>
+        </div>
+        
+        ${analyticsData.topSellingItems.length > 0 ? `
+        <div class="section">
+            <h3 class="section-title">🏆 Top Selling Items</h3>
+            <div class="items-grid">
+                ${analyticsData.topSellingItems.map((item, index) => `
+                    <div class="item-card">
+                        <div class="item-name">${index + 1}. ${item.name}</div>
+                        <div class="item-details">Quantity: ${item.quantity} | Revenue: ₹${item.revenue.toLocaleString()}</div>
+                    </div>
+                `).join('')}
+            </div>
+        </div>
+        ` : ''}
+        
+        <div class="section">
+            <h3 class="section-title">📋 Expense Breakdown</h3>
+            <div class="items-grid">
+                <div class="item-card">
+                    <div class="item-name">Raw Material Expenses</div>
+                    <div class="item-details">₹${(analyticsData.rawMaterialExpense || 0).toLocaleString()}</div>
+                </div>
+                <div class="item-card">
+                    <div class="item-name">Upad Expenses</div>
+                    <div class="item-details">₹${(analyticsData.upadAsExpense || 0).toLocaleString()}</div>
+                </div>
+                <div class="item-card">
+                    <div class="item-name">Staff Salary Expenses</div>
+                    <div class="item-details">₹${analyticsData.staffSalaryExpense.toLocaleString()}</div>
+                </div>
+                <div class="item-card">
+                    <div class="item-name">Other Expenses</div>
+                    <div class="item-details">₹0</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <p><strong>${profile.name || 'SURA-RESTO by SURA'}</strong></p>
+            <p>Restaurant Management System by SURA</p>
+            <p class="generated-date">Report generated on ${new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })} at ${new Date().toLocaleTimeString()}</p>
+        </div>
+    </div>
+</body>
+</html>
     `.trim();
 
-    // Create blob and download as .txt file
-    const blob = new Blob([reportContent], { type: 'text/plain' });
+    // Create blob and download as .html file
+    const blob = new Blob([htmlContent], { type: 'text/html' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `revenue_analytics_${dateFilter}_${currentDate.replace(/\//g, '-')}.txt`;
+    const formattedDate = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).replace(/\//g, '-');
+    a.download = `revenue_analytics_${dateFilter}_${formattedDate}.html`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
     
-    setSuccess('Revenue report downloaded successfully!');
+    setSuccess('✅ Beautiful HTML report downloaded successfully!');
   };
 
   return (
@@ -2404,15 +2509,10 @@ For support, contact your system administrator
                     <Typography variant="body2" sx={{ color: '#6A1B9A', fontWeight: 'medium' }}>
                       {getDateRange(dateFilter).label}
                     </Typography>
-                    {((dateFilter === 'custom' || dateFilter === 'customYear' || dateFilter === 'customRange') || dateRange.start !== dateRange.end) && (
-                      <Typography variant="body2" sx={{ color: '#666', ml: 1 }}>
-                        • {dateRange.start} to {dateRange.end}
-                      </Typography>
-                    )}
                   </Box>
                   
                   {/* PDF Download Button - Now positioned at the end of date range section */}
-                                      <Tooltip title="Download Revenue Report as Text">
+                                      <Tooltip title="Download Beautiful HTML Report">
                     <IconButton
                       onClick={handleDownloadRevenueText}
                       size="small"
@@ -3403,7 +3503,7 @@ For support, contact your system administrator
                       .sort((a: Expense, b: Expense) => new Date(b.date).getTime() - new Date(a.date).getTime())
                       .map((expense: Expense) => (
                         <TableRow key={expense.id} hover>
-                          <TableCell>{new Date(expense.date).toLocaleDateString()}</TableCell>
+                          <TableCell>{new Date(expense.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</TableCell>
                           <TableCell>
                             <Chip label={expense.category} size="small" />
                           </TableCell>
@@ -3570,7 +3670,7 @@ For support, contact your system administrator
                             <TableCell>
                               <Box>
                                 <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
-                                  {billDate.toLocaleDateString()}
+                                  {billDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
                                 </Typography>
                                 <Typography variant="caption" color="textSecondary">
                                   {billDate.toLocaleTimeString()}
@@ -3943,7 +4043,7 @@ For support, contact your system administrator
                             >
                               <MenuItem value="">All Months</MenuItem>
                               {summaryYear !== null && Array.from(new Set(staffList.flatMap(staff => staff.paymentHistory.filter(h => h.year === summaryYear).map(h => h.month)))).sort((a, b) => a - b).map(m => (
-                                <MenuItem key={m} value={m}>{new Date(2024, m, 1).toLocaleString('en-US', { month: 'long' })}</MenuItem>
+                                <MenuItem key={m} value={m}>{new Date(2024, m, 1).toLocaleString('en-GB', { month: 'short' })}</MenuItem>
                               ))}
                             </Select>
                           </FormControl>
@@ -4123,7 +4223,7 @@ For support, contact your system administrator
                               >
                                 <MenuItem value="">All Months</MenuItem>
                                 {summaryYear !== null && Array.from(new Set(staffList[historyStaffIndex].paymentHistory.filter(h => h.year === summaryYear).map(h => h.month))).sort((a, b) => a - b).map(m => (
-                                  <MenuItem key={m} value={m}>{new Date(2024, m, 1).toLocaleString('en-US', { month: 'long' })}</MenuItem>
+                                  <MenuItem key={m} value={m}>{new Date(2024, m, 1).toLocaleString('en-GB', { month: 'short' })}</MenuItem>
                                 ))}
                               </Select>
                             </FormControl>
@@ -4152,7 +4252,7 @@ For support, contact your system administrator
                             <TableBody>
                               {staffList[historyStaffIndex].paymentHistory.map((h, i) => (
                                 <TableRow key={i}>
-                                  <TableCell>{new Date(2024, h.month, 1).toLocaleString('en-US', { month: 'short' })}</TableCell>
+                                  <TableCell>{new Date(2024, h.month, 1).toLocaleString('en-GB', { month: 'short' })}</TableCell>
                                   <TableCell>{h.year}</TableCell>
                                   <TableCell>₹{h.amount}</TableCell>
                                   <TableCell>{h.paidDate}</TableCell>
@@ -4416,7 +4516,7 @@ For support, contact your system administrator
                               size="small"
                             />
                           </TableCell>
-                          <TableCell>{user.createdAt.toLocaleDateString()}</TableCell>
+                          <TableCell>{user.createdAt.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</TableCell>
                           <TableCell>
                             <Chip
                               label={user.isActive ? 'Active' : 'Inactive'}
@@ -5048,7 +5148,7 @@ For support, contact your system administrator
                 >
                   <MenuItem value="">(All Months)</MenuItem>
                   {Array.from({ length: 12 }, (_, i) => (
-                    <MenuItem key={i} value={String(i)}>{new Date(2024, i, 1).toLocaleDateString('en-US', { month: 'long' })}</MenuItem>
+                                            <MenuItem key={i} value={String(i)}>{new Date(2024, i, 1).toLocaleDateString('en-GB', { month: 'short' })}</MenuItem>
                   ))}
                 </Select>
               </FormControl>
@@ -5192,7 +5292,7 @@ For support, contact your system administrator
             {customDateRange.startDate && customDateRange.endDate ? (
               <Box>
                 <Typography variant="h6" sx={{ color: '#2c3e50' }}>
-                  {new Date(customDateRange.startDate).toLocaleDateString()} - {new Date(customDateRange.endDate).toLocaleDateString()}
+                  {new Date(customDateRange.startDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })} - {new Date(customDateRange.endDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
                 </Typography>
                 <Typography variant="body2" color="textSecondary">
                   Custom date range analysis
@@ -5201,7 +5301,7 @@ For support, contact your system administrator
             ) : (
               <Box>
                 <Typography variant="h6" sx={{ color: '#2c3e50' }}>
-                  {customDay ? `${customDay} ` : ''}{customMonth !== null ? new Date(customYear, customMonth, 1).toLocaleDateString('en-US', { month: 'long' }) + ' ' : ''}{customYear}
+                  {customDay ? `${customDay} ` : ''}{customMonth !== null ? new Date(customYear, customMonth, 1).toLocaleDateString('en-GB', { month: 'short' }) + ' ' : ''}{customYear}
                 </Typography>
                 <Typography variant="body2" color="textSecondary">
                   {customDay ? 'Day' : customMonth !== null ? 'Month' : 'Year'} revenue analysis

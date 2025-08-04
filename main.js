@@ -246,25 +246,131 @@ ipcMain.handle('check-printer-connectivity', async () => {
     if (mainWindow) {
       const printers = mainWindow.webContents.getPrinters();
       const isConnected = printers.length > 0;
+      
+      // Enhanced printer information with thermal detection
+      const enhancedPrinters = printers.map(printer => {
+        const isThermal = detectThermalPrinter(printer.name);
+        return {
+          name: printer.name,
+          status: printer.status,
+          isDefault: printer.isDefault,
+          isThermal: isThermal,
+          priority: isThermal ? 1 : 2, // Thermal printers get higher priority
+          port: printer.options?.port || 'Unknown',
+          connectionType: detectConnectionType(printer),
+          description: printer.description || '',
+          location: printer.options?.location || ''
+        };
+      });
+
+      // Find recommended printer (prefer thermal, then default)
+      let recommendedPrinter = null;
+      const thermalPrinters = enhancedPrinters.filter(p => p.isThermal);
+      if (thermalPrinters.length > 0) {
+        recommendedPrinter = thermalPrinters[0];
+      } else if (enhancedPrinters.length > 0) {
+        recommendedPrinter = enhancedPrinters.find(p => p.isDefault) || enhancedPrinters[0];
+      }
+
       log.info('✅ Printer connectivity checked:', { 
         isConnected, 
         printerCount: printers.length,
-        printers: printers.map(p => ({ name: p.name, status: p.status }))
+        thermalCount: thermalPrinters.length,
+        printers: enhancedPrinters.map(p => ({ name: p.name, status: p.status, isThermal: p.isThermal }))
       });
+      
       return {
         isConnected,
         printerCount: printers.length,
-        printers: printers.map(printer => ({
-          name: printer.name,
-          status: printer.status,
-          isDefault: printer.isDefault
-        }))
+        printers: enhancedPrinters,
+        recommendedPrinter: recommendedPrinter ? {
+          name: recommendedPrinter.name,
+          isThermal: recommendedPrinter.isThermal,
+          priority: recommendedPrinter.priority
+        } : null
       };
     }
-    return { isConnected: false, printerCount: 0, printers: [] };
+    return { isConnected: false, printerCount: 0, printers: [], recommendedPrinter: null };
   } catch (error) {
     log.error('❌ Failed to check printer connectivity:', { error: error.message });
-    return { isConnected: false, printerCount: 0, printers: [] };
+    return { isConnected: false, printerCount: 0, printers: [], recommendedPrinter: null };
+  }
+});
+
+// Auto-connect to recommended printer
+ipcMain.handle('auto-connect-printer', async () => {
+  log.info('🔗 Auto-connecting to recommended printer');
+  try {
+    if (mainWindow) {
+      const printers = mainWindow.webContents.getPrinters();
+      if (printers.length === 0) {
+        return { success: false, error: 'No printers available' };
+      }
+
+      // Find thermal printer first, then default printer
+      const thermalPrinter = printers.find(p => detectThermalPrinter(p.name));
+      const defaultPrinter = printers.find(p => p.isDefault);
+      const selectedPrinter = thermalPrinter || defaultPrinter || printers[0];
+
+      const isThermal = detectThermalPrinter(selectedPrinter.name);
+      
+      log.info('✅ Auto-connected to printer:', { 
+        name: selectedPrinter.name, 
+        isThermal,
+        status: selectedPrinter.status 
+      });
+
+      return {
+        success: true,
+        printer: {
+          name: selectedPrinter.name,
+          isThermal: isThermal,
+          priority: isThermal ? 1 : 2,
+          status: selectedPrinter.status
+        }
+      };
+    }
+    return { success: false, error: 'No main window available' };
+  } catch (error) {
+    log.error('❌ Auto-connect failed:', { error: error.message });
+    return { success: false, error: error.message };
+  }
+});
+
+// Test printer connection
+ipcMain.handle('test-printer', async (event, printerName) => {
+  log.info('🧪 Testing printer:', { printerName });
+  try {
+    if (mainWindow) {
+      const printers = mainWindow.webContents.getPrinters();
+      const printer = printers.find(p => p.name === printerName);
+      
+      if (!printer) {
+        return { success: false, error: 'Printer not found' };
+      }
+
+      // Test printer by attempting to get its capabilities
+      const isThermal = detectThermalPrinter(printer.name);
+      
+      log.info('✅ Printer test successful:', { 
+        name: printer.name, 
+        status: printer.status,
+        isThermal 
+      });
+
+      return {
+        success: true,
+        printer: {
+          name: printer.name,
+          status: printer.status,
+          isThermal: isThermal
+        }
+      };
+    }
+    return { success: false, error: 'No main window available' };
+  } catch (error) {
+    log.error('❌ Printer test failed:', { error: error.message });
+    return { success: false, error: error.message };
   }
 });
 
@@ -431,3 +537,28 @@ autoUpdater.on('update-downloaded', (info) => {
 });
 
 log.info('🎯 Main process initialization complete'); 
+
+// Helper function to detect thermal printers
+function detectThermalPrinter(printerName) {
+  const thermalKeywords = [
+    'thermal', 'receipt', 'pos', 'cash', 'register', 'terminal',
+    'star', 'citizen', 'epson tm', 'bixolon', 'zjiang', 'custom',
+    'label', 'ticket', 'slip', 'bill'
+  ];
+  
+  const lowerName = printerName.toLowerCase();
+  return thermalKeywords.some(keyword => lowerName.includes(keyword));
+}
+
+// Helper function to detect connection type
+function detectConnectionType(printer) {
+  const name = printer.name.toLowerCase();
+  const options = printer.options || {};
+  
+  if (name.includes('usb') || options.port?.includes('usb')) return 'USB';
+  if (name.includes('wifi') || name.includes('wireless') || name.includes('network')) return 'WiFi';
+  if (name.includes('bluetooth') || name.includes('bt')) return 'Bluetooth';
+  if (name.includes('ethernet') || name.includes('lan')) return 'Ethernet';
+  
+  return 'Unknown';
+} 

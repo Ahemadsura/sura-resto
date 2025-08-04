@@ -9,6 +9,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Printer Management APIs
   getPrinters: () => ipcRenderer.invoke('get-printers'),
   checkPrinterConnectivity: () => ipcRenderer.invoke('check-printer-connectivity'),
+  autoConnectPrinter: () => ipcRenderer.invoke('auto-connect-printer'),
+  testPrinter: (printerName) => ipcRenderer.invoke('test-printer', printerName),
   
   // Offline Management APIs
   store: {

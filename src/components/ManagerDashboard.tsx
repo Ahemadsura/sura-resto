@@ -70,6 +70,7 @@ import OfflineIndicator from './OfflineIndicator';
 import PrinterConnectivity from './PrinterConnectivity';
 import TableInputDialog from './TableInputDialog';
 
+
 interface RunningTable {
   tableNumber: string;
   customerType: 'private' | 'loading';
@@ -120,6 +121,7 @@ const ManagerDashboard: React.FC = () => {
   const [tableInputDialog, setTableInputDialog] = useState(false);
   const [billHistoryDialog, setBillHistoryDialog] = useState(false);
   const [statsDialog, setStatsDialog] = useState(false);
+
   const [viewBillDialog, setViewBillDialog] = useState(false);
   const [selectedBillForView, setSelectedBillForView] = useState<Bill | null>(null);
   const [modifyingBillId, setModifyingBillId] = useState<string | null>(null);
@@ -1342,6 +1344,7 @@ const ManagerDashboard: React.FC = () => {
           >
             Stats
           </Button>
+
         </Box>
 
         <Box sx={{ display: 'flex', gap: 2, flex: 1, minHeight: 0, height: '100%' }}>
@@ -3069,6 +3072,8 @@ const ManagerDashboard: React.FC = () => {
           </Button>
         </DialogActions>
       </Dialog>
+
+
     </Box>
   );
 };
