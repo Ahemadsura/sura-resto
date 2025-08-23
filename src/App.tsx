@@ -4,8 +4,8 @@ import { ThemeProvider, createTheme } from '@mui/material/styles';
 import { CssBaseline } from '@mui/material';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import Login from './components/Login';
-import ManagerDashboard from './components/ManagerDashboard';
-import OwnerDashboard from './components/OwnerDashboard';
+import ManagerDashboard from './components/manager/ManagerDashboard';
+import OwnerDashboard from './components/owner/OwnerDashboard';
 import UpdateBanner from './components/UpdateBanner';
 import ErrorBoundary from './components/ErrorBoundary';
 

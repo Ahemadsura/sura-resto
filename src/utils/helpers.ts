@@ -157,6 +157,21 @@ export const formatTime = (date: Date | any): string => {
   });
 };
 
+// Format date as dd/mon/yyyy (e.g., 12/feb/2024)
+export const formatDateDmy = (date: Date | any): string => {
+  let dateObj: Date;
+  if (date && typeof date === 'object' && 'toDate' in date) {
+    dateObj = date.toDate();
+  } else {
+    dateObj = new Date(date);
+  }
+  if (isNaN(dateObj.getTime())) return '';
+  const dd = String(dateObj.getDate()).padStart(2, '0');
+  const mon = ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'][dateObj.getMonth()];
+  const yyyy = dateObj.getFullYear();
+  return `${dd}/${mon}/${yyyy}`;
+};
+
 // Validate payment methods
 export const validatePayments = (paymentMethods: PaymentMethod[], totalAmount: number): boolean => {
   const totalPaid = paymentMethods.reduce((sum, payment) => sum + payment.amount, 0);
