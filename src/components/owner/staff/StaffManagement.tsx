@@ -23,7 +23,10 @@ import {
   InputAdornment,
   Snackbar,
   Alert,
-  LinearProgress
+  LinearProgress,
+  Avatar,
+  Divider,
+  Tooltip
 } from '@mui/material';
 import FormControl from '@mui/material/FormControl';
 import InputLabel from '@mui/material/InputLabel';
@@ -35,8 +38,13 @@ import {
   Search,
   Clear
 } from '@mui/icons-material';
+import PhoneIcon from '@mui/icons-material/Phone';
+import ContentCopyIcon from '@mui/icons-material/ContentCopy';
+import HistoryIcon from '@mui/icons-material/History';
+import MonetizationOnIcon from '@mui/icons-material/MonetizationOn';
+import BeachAccessIcon from '@mui/icons-material/BeachAccess';
 import { staffService } from '../../../lib/services/staff/provider';
-import { useAuth } from '../../../contexts/AuthContext';
+import { useAuth } from '../../../contexts/SupabaseAuthContext';
 import { getStaffTotals, getAmountLeftToPay } from "./staffUtils";
 import RefreshButton from "../common/RefreshButton";
 import PaginationControls from "../common/PaginationControls";
@@ -121,6 +129,12 @@ const StaffManagement: React.FC = () => {
   }, []);
   useEffect(() => {
     localStorage.setItem('owner_staffList', JSON.stringify(staffList));
+    // Notify other parts of the app (e.g., OwnerDashboard) that staff changed
+    try {
+      window.dispatchEvent(new CustomEvent('staffListUpdated', { detail: staffList }));
+    } catch (e) {
+      // no-op
+    }
   }, [staffList]);
 
   // Debounce search
@@ -291,6 +305,8 @@ const StaffManagement: React.FC = () => {
     ];
     const safePaymentHistory = newPaymentHistory.map(h => ({ ...h, type: h.type as 'salary' | 'upad' }));
     await updateStaffInFirestore(staff.id, { prepaid: newPrepaid, paymentHistory: safePaymentHistory });
+
+    // Do NOT record as raw material expense. Upad flows through analytics via paymentHistory only.
     setSuccess('Advance (Upad) added');
   };
 
@@ -526,10 +542,10 @@ const StaffManagement: React.FC = () => {
             open={Boolean(actionAnchorEl)}
             onClose={() => setActionAnchorEl(null)}
           >
-            <MenuItem onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              if (actionMenuIdx !== null) {
+            <MenuItem onClick={(e) => { 
+              e.preventDefault(); 
+              e.stopPropagation(); 
+              if (actionMenuIdx !== null) { 
                 setDetailsStaffIndex(actionMenuIdx);
                 setShowDetailsDialog(true);
               }
@@ -809,26 +825,69 @@ const StaffManagement: React.FC = () => {
 
         {/* Staff Details Dialog */}
         <Dialog open={showDetailsDialog} onClose={() => setShowDetailsDialog(false)} maxWidth="xs" fullWidth>
-          <DialogTitle sx={{ fontWeight: 'bold' }}>Staff Details</DialogTitle>
-          <DialogContent>
+          <DialogTitle sx={{ fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: 1 }}>Staff Details</DialogTitle>
+          <DialogContent sx={{ pt: 2 }}>
             {detailsStaffIndex !== null && staffList[detailsStaffIndex] && (() => {
               const st = staffList[detailsStaffIndex];
+              const initials = st.name?.split(' ').map(s => s[0]).slice(0,2).join('').toUpperCase();
+              const currency = (v: number) => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', minimumFractionDigits: 0 }).format(v);
+              const amountLeft = getAmountLeftToPay(st);
               return (
-                <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', rowGap: 1.5, columnGap: 2, mt: 1 }}>
-                  <Typography variant="body2" color="text.secondary">Name</Typography>
-                  <Typography variant="body2">{st.name}</Typography>
-                  <Typography variant="body2" color="text.secondary">Role</Typography>
-                  <Typography variant="body2">{st.role || '-'}</Typography>
-                  <Typography variant="body2" color="text.secondary">Phone</Typography>
-                  <Typography variant="body2">{st.phone || '-'}</Typography>
-                  <Typography variant="body2" color="text.secondary">Payment Cycle</Typography>
-                  <Typography variant="body2">{st.paymentCycle || 'Monthly'}</Typography>
-                  <Typography variant="body2" color="text.secondary">Salary</Typography>
-                  <Typography variant="body2">{new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', minimumFractionDigits: 0 }).format(st.salary)}</Typography>
-                  <Typography variant="body2" color="text.secondary">Joined</Typography>
-                  <Typography variant="body2">{st.joinDate ? formatDateDmy(st.joinDate) : '-'}</Typography>
-                  <Typography variant="body2" color="text.secondary">Last Paid</Typography>
-                  <Typography variant="body2">{st.lastPaidDate ? formatDateDmy(st.lastPaidDate) : '-'}</Typography>
+                <Box>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+                    <Avatar sx={{ bgcolor: '#6A1B9A' }}>{initials}</Avatar>
+                    <Box sx={{ flex: 1 }}>
+                      <Typography variant="h6" sx={{ lineHeight: 1.2 }}>{st.name}</Typography>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.5, flexWrap: 'wrap' }}>
+                        <Chip label={st.role || 'Staff'} size="small" />
+                        <Chip label={st.paymentCycle || 'Monthly'} size="small" color="info" />
+                        <Chip label={amountLeft === 0 ? 'Paid' : 'Unpaid'} size="small" color={amountLeft === 0 ? 'success' : 'warning'} />
+                      </Box>
+                    </Box>
+                  </Box>
+
+                  <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', rowGap: 1.2, columnGap: 2, mb: 2 }}>
+                    <Typography variant="body2" color="text.secondary">Phone</Typography>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <Button size="small" startIcon={<PhoneIcon />} href={st.phone ? `tel:${st.phone}` : undefined} disabled={!st.phone} sx={{ textTransform: 'none' }}>
+                        {st.phone || '-'}
+                      </Button>
+                      {st.phone && (
+                        <Tooltip title="Copy">
+                          <IconButton size="small" onClick={() => navigator.clipboard.writeText(st.phone as string)}>
+                            <ContentCopyIcon fontSize="inherit" />
+                          </IconButton>
+                        </Tooltip>
+                      )}
+                    </Box>
+                    <Typography variant="body2" color="text.secondary">Joined</Typography>
+                    <Typography variant="body2">{st.joinDate ? formatDateDmy(st.joinDate) : '-'}</Typography>
+                    <Typography variant="body2" color="text.secondary">Last Paid</Typography>
+                    <Typography variant="body2">{st.lastPaidDate ? formatDateDmy(st.lastPaidDate) : '-'}</Typography>
+                  </Box>
+
+                  <Divider sx={{ my: 1.5 }} />
+
+                  <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 1.5, mb: 2 }}>
+                    <Paper variant="outlined" sx={{ p: 1.5, borderRadius: 1.5 }}>
+                      <Typography variant="caption" color="text.secondary">Monthly Salary</Typography>
+                      <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>{currency(st.salary)}</Typography>
+                    </Paper>
+                    <Paper variant="outlined" sx={{ p: 1.5, borderRadius: 1.5 }}>
+                      <Typography variant="caption" color="text.secondary">Amount Left</Typography>
+                      <Typography variant="subtitle1" sx={{ fontWeight: 'bold', color: amountLeft === 0 ? 'success.main' : 'warning.main' }}>{currency(amountLeft)}</Typography>
+                    </Paper>
+                    <Paper variant="outlined" sx={{ p: 1.5, borderRadius: 1.5 }}>
+                      <Typography variant="caption" color="text.secondary">Pending Months</Typography>
+                      <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>{st.pendingMonths || 0}</Typography>
+                    </Paper>
+                  </Box>
+
+                  <Box sx={{ display: 'flex', gap: 1, justifyContent: 'space-between' }}>
+                    <Button fullWidth variant="outlined" startIcon={<HistoryIcon />} onClick={() => { setShowDetailsDialog(false); setHistoryStaffIndex(detailsStaffIndex); setShowHistoryDialog(true); }} sx={{ textTransform: 'none' }}>View History</Button>
+                    <Button fullWidth variant="outlined" startIcon={<BeachAccessIcon />} onClick={() => { setShowDetailsDialog(false); if (detailsStaffIndex !== null) openLeaveDialogForIndex(detailsStaffIndex); }} sx={{ textTransform: 'none' }}>Add Leave</Button>
+                    <Button fullWidth variant="contained" startIcon={<MonetizationOnIcon />} onClick={() => { setShowDetailsDialog(false); setConfirmPayIndex(detailsStaffIndex); setConfirmPayOpen(true); }} sx={{ textTransform: 'none', bgcolor: '#6A1B9A', '&:hover': { bgcolor: '#4A148C' } }}>Record Payment</Button>
+                  </Box>
                 </Box>
               );
             })()}

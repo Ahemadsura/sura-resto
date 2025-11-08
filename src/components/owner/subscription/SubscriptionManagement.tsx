@@ -12,7 +12,7 @@ import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
 import EventBusyIcon from '@mui/icons-material/EventBusy';
 import TimerIcon from '@mui/icons-material/Timer';
 import RefreshButton from '../common/RefreshButton';
-import { useAuth } from '../../../contexts/AuthContext';
+import { useAuth } from '../../../contexts/SupabaseAuthContext';
 import { db } from '../../../config/firebase';
 import { doc, onSnapshot } from 'firebase/firestore';
 

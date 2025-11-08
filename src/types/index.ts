@@ -6,6 +6,8 @@ export interface User {
   displayName?: string;
   photoURL?: string;
   lastLogin?: Date;
+  isActive?: boolean;
+  devBypass?: boolean;
 }
 
 export interface MenuItem {

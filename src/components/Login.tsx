@@ -16,7 +16,7 @@ import {
   Email, 
   Lock
 } from '@mui/icons-material';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '../contexts/SupabaseAuthContext';
 import { validateEmail, validatePassword } from '../utils/validation';
 import { rateLimiter } from '../utils/rateLimiter';
 

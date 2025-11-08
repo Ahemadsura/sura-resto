@@ -2,7 +2,8 @@ import React from 'react';
 import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import { CssBaseline } from '@mui/material';
-import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { AuthProvider, useAuth } from './contexts/SupabaseAuthContext';
+import { SubscriptionProvider, useSubscription } from './contexts/SubscriptionContext';
 import Login from './components/Login';
 import ManagerDashboard from './components/manager/ManagerDashboard';
 import OwnerDashboard from './components/owner/OwnerDashboard';
@@ -51,11 +52,9 @@ const theme = createTheme({
   },
 });
 
-const ProtectedRoute: React.FC<{ children: React.ReactNode; role?: 'owner' | 'manager' }> = ({ 
-  children, 
-  role 
-}) => {
-  const { currentUser } = useAuth();
+const ProtectedRoute: React.FC<{ children: React.ReactNode; role?: 'owner' | 'manager' }> = ({ children, role }) => {
+  const { currentUser, logout } = useAuth();
+  const { status, isDeveloperBypass, isDeveloperAccount } = useSubscription();
 
   if (!currentUser) {
     return <Navigate to="/login" replace />;
@@ -65,11 +64,22 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode; role?: 'owner' | 'ma
     return <Navigate to="/login" replace />;
   }
 
+  // Strict subscription enforcement for non-developer accounts
+  if (!isDeveloperAccount && status === 'expired') {
+    // For managers, force logout immediately when subscription expires
+    if (currentUser.role === 'manager') {
+      logout();
+      return <Navigate to="/login" replace />;
+    }
+    // For owners, redirect to subscription page (handled by SubscriptionGate)
+  }
+
   return <>{children}</>;
 };
 
 const AppRoutes: React.FC = () => {
   const { currentUser } = useAuth();
+  const { status, isDeveloperBypass, isDeveloperAccount } = useSubscription();
 
   return (
     <Routes>
@@ -77,7 +87,7 @@ const AppRoutes: React.FC = () => {
         path="/login" 
         element={
           currentUser ? (
-            <Navigate to={currentUser.role === 'owner' ? '/owner' : '/manager'} replace />
+            <Navigate to={currentUser.role === 'owner' ? (!isDeveloperAccount && status === 'expired' ? '/subscription' : '/owner') : '/manager'} replace />
           ) : (
             <Login />
           )
@@ -104,12 +114,26 @@ const AppRoutes: React.FC = () => {
         } 
       />
       <Route 
+        path="/subscription" 
+        element={
+          <ProtectedRoute>
+            <ErrorBoundary>
+            <OwnerDashboard />
+            </ErrorBoundary>
+          </ProtectedRoute>
+        } 
+      />
+      <Route 
         path="/" 
         element={
           <Navigate 
             to={
               currentUser 
-                ? (currentUser.role === 'owner' ? '/owner' : '/manager')
+                ? (
+                    currentUser.role === 'owner'
+                      ? (!isDeveloperAccount && status === 'expired' ? '/subscription' : '/owner')
+                      : '/manager'
+                  )
                 : '/login'
             } 
             replace 
@@ -126,10 +150,12 @@ const App: React.FC = () => {
     <ThemeProvider theme={theme}>
       <CssBaseline />
       <AuthProvider>
-        <Router>
-          {typeof window !== 'undefined' && window.electronAPI && <UpdateBanner />}
-          <AppRoutes />
-        </Router>
+        <SubscriptionProvider>
+          <Router>
+            {typeof window !== 'undefined' && window.electronAPI && <UpdateBanner />}
+            <AppRoutes />
+          </Router>
+        </SubscriptionProvider>
       </AuthProvider>
     </ThemeProvider>
     </ErrorBoundary>

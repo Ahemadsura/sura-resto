@@ -74,6 +74,7 @@ import {
 import AutorenewIcon from '@mui/icons-material/Autorenew';
 import RevenueDashboard from './revenue/RevenueDashboard';
 import SubscriptionManagement from './subscription/SubscriptionManagement';
+import SubscriptionGate from './SubscriptionGate';
 import MenuManagement from './menu/MenuManagement';
 import ExpenseManagement from './expenses/ExpenseManagement';
 import ExpenseDialog from './expenses/ExpenseDialog';
@@ -102,7 +103,9 @@ import {
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import { db } from '../../config/firebase';
 import { MenuItem as MenuItemType, Bill, BillItem } from '../../types';
-import { useAuth } from '../../contexts/AuthContext';
+import { useAuth } from '../../contexts/SupabaseAuthContext';
+import DeveloperBadge from '../DeveloperBadge';
+import { SupabaseUserService as UserManagementService, RestaurantUser } from '../../lib/services/users/supabase';
 import { saveToLocalStorage, getFromLocalStorage } from '../../utils/helpers';
 // Chart imports removed - now using reusable RevenueChart component
 import useMediaQuery from '@mui/material/useMediaQuery';
@@ -158,17 +161,6 @@ interface CustomDateRange {
 
 // Add this type above the OwnerDashboard component for clarity
 
-
-interface RestaurantUser {
-  id: string;
-  email: string;
-  displayName: string;
-  role: 'owner' | 'manager';
-  createdAt: Date;
-  lastLogin?: Date;
-  isActive: boolean;
-  createdBy: string;
-}
 
 const drawerWidth = 240;
 
@@ -328,6 +320,19 @@ const OwnerDashboard: React.FC = () => {
     calculateAnalytics();
   }, [bills, expenses, staffList, dateFilter, customDate]);
 
+  // Listen for staff updates from StaffManagement (same-tab communication)
+  useEffect(() => {
+    const handler = (e: any) => {
+      const updated = e?.detail;
+      if (Array.isArray(updated) && updated.length >= staffList.length) {
+        setStaffList(updated as any);
+        // calculateAnalytics will re-run due to dependency
+      }
+    };
+    window.addEventListener('staffListUpdated', handler as any);
+    return () => window.removeEventListener('staffListUpdated', handler as any);
+  }, [staffList.length]);
+
   // Fetch users when User Management section is opened
   useEffect(() => {
     if (activeSection === 'users' && restaurantId) {
@@ -419,7 +424,13 @@ const OwnerDashboard: React.FC = () => {
       end: end.toLocaleDateString()
     });
     
-    const analyticsData = calculateAnalyticsUtil(bills, expenses, staffList, dateFilter, 0, {
+    // Use the freshest staff list (prefer localStorage updated by StaffManagement if newer)
+    const localStaffList = getFromLocalStorage('owner_staffList') || [];
+    const mergedStaffList = Array.isArray(localStaffList) && localStaffList.length > 0
+      ? (localStaffList.length >= staffList.length ? localStaffList : staffList)
+      : staffList;
+
+    const analyticsData = calculateAnalyticsUtil(bills, expenses, mergedStaffList as any, dateFilter, 0, {
       customDate,
       customDay,
       customMonth,
@@ -783,21 +794,8 @@ const OwnerDashboard: React.FC = () => {
   const fetchRestaurantUsers = async () => {
     try {
       if (!currentUser?.restaurantId) return;
-      const usersCollection = collection(db, 'restaurantProfile', currentUser.restaurantId, 'users');
-      const usersSnapshot = await getDocs(usersCollection);
-      const userData: RestaurantUser[] = [];
-      usersSnapshot.forEach((doc) => {
-        const data = doc.data();
-        userData.push({ 
-          id: doc.id, 
-          ...data,
-          createdAt: data.createdAt?.toDate() || new Date(),
-          lastLogin: data.lastLogin?.toDate(),
-          // Fix: Ensure owners are always active if isActive is undefined
-          isActive: data.isActive !== undefined ? data.isActive : (data.role === 'owner' ? true : false)
-        } as RestaurantUser);
-      });
-      setRestaurantUsers(userData);
+      const users = await UserManagementService.getRestaurantUsers(currentUser.restaurantId);
+      setRestaurantUsers(users);
     } catch (error) {
       console.error('Error fetching users:', error);
       setError('Failed to fetch restaurant users');
@@ -1500,6 +1498,7 @@ const OwnerDashboard: React.FC = () => {
   };
 
   return (
+    <SubscriptionGate>
     <>
     <Box sx={{ display: 'flex', height: '100vh', bgcolor: '#f5f5f5' }}>
       {/* Responsive Sidebar Drawer */}
@@ -1521,15 +1520,20 @@ const OwnerDashboard: React.FC = () => {
         }}
       >
         {/* Sidebar content (profile, nav, etc) */}
-        <Box sx={{ p: 2, borderBottom: '1px solid rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', gap: 1 }}>
-          <span style={{ fontSize: 32, marginRight: 8 }}>🍽️</span>
-          <Box>
-            <Typography variant="h6" sx={{ color: 'white', fontWeight: 'bold' }}>
-              {profile.name || 'SURA-RESTO by SURA'}
-            </Typography>
-            <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.7)' }}>
-              {profile.address || 'Owner Dashboard'}
-            </Typography>
+        <Box sx={{ p: 2, borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+            <span style={{ fontSize: 32, marginRight: 8 }}>🍽️</span>
+            <Box sx={{ flex: 1 }}>
+              <Typography variant="h6" sx={{ color: 'white', fontWeight: 'bold' }}>
+                {profile.name || 'SURA-RESTO by SURA'}
+              </Typography>
+              <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.7)' }}>
+                {profile.address || 'Owner Dashboard'}
+              </Typography>
+            </Box>
+          </Box>
+          <Box sx={{ display: 'flex', justifyContent: 'center', mt: 1 }}>
+            <DeveloperBadge />
           </Box>
         </Box>
         <Button
@@ -2762,6 +2766,7 @@ const OwnerDashboard: React.FC = () => {
       </DialogActions>
     </Dialog>
     </>
+    </SubscriptionGate>
   );
 };
 

@@ -13,6 +13,7 @@
     "@mui/x-charts": "^8.5.1",
     "@sentry/electron": "^6.8.0",
     "@sentry/react": "^9.34.0",
+    "@supabase/supabase-js": "^2.57.4",
     "@testing-library/dom": "^10.4.0",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.3.0",
@@ -52,7 +53,13 @@
     "dist": "npm run build && electron-builder --win --x64 --publish never",
     "build:desktop": "npm run build && electron-builder --win --x64 --publish never",
     "electron:dev": "electron .",
-    "package": "electron-builder --win"
+    "package": "electron-builder --win",
+    "migrate:setup": "cd migration && npm install",
+    "migrate:test": "cd migration && npm run test-connection",
+    "migrate:export": "cd migration && npm run export",
+    "migrate:import": "cd migration && npm run import",
+    "migrate:run": "cd migration && npm run migrate",
+    "migrate:update-imports": "node scripts/update-imports.js"
   },
   "browserslist": {
     "production": [

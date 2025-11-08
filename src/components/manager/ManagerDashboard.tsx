@@ -59,7 +59,9 @@ import {
 } from 'firebase/firestore';
 import { db } from '../../config/firebase';
 import { MenuItem as MenuItemType, BillItem, Bill } from '../../types';
-import { useAuth } from '../../contexts/AuthContext';
+import { useAuth } from '../../contexts/SupabaseAuthContext';
+import DeveloperBadge from '../DeveloperBadge';
+import { useSubscription } from '../../contexts/SubscriptionContext';
 import { formatCurrency, formatDate, saveToLocalStorage, getFromLocalStorage, generateBillNumber, updateHighestBillNumber } from '../../utils/helpers';
 import PrintableBill from '../PrintableBill';
 import { useReactToPrint } from 'react-to-print';
@@ -132,6 +134,13 @@ const ManagerDashboard: React.FC = () => {
   const [loading, setLoading] = useState(false);
 
   const { currentUser, logout } = useAuth();
+  const { status, isDeveloperBypass } = useSubscription();
+
+  useEffect(() => {
+    if (!isDeveloperBypass && status === 'expired' && currentUser?.role === 'manager') {
+      logout();
+    }
+  }, [status, isDeveloperBypass, currentUser, logout]);
 
   // Offline sync functionality
   const handleOfflineSync = async () => {
@@ -1266,6 +1275,9 @@ const ManagerDashboard: React.FC = () => {
           </Box>
           
           <Box className="flex items-center gap-3">
+            {/* Developer Badge */}
+            <DeveloperBadge />
+            
             {/* Printer Connectivity Indicator */}
             <PrinterConnectivity />
             

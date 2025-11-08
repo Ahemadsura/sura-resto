@@ -9,6 +9,28 @@ service cloud.firestore {
     
     // Restaurant profile with multi-tenant structure
     match /restaurantProfile/{restaurantId} {
+      // Helper to determine if developer bypass applies
+      function isDeveloperBypass() {
+        return request.auth != null && (
+          (
+            request.auth.token.email != null &&
+            (
+              lower(request.auth.token.email) == 'sura.resto.biz@gmail.com' ||
+              lower(request.auth.token.email) == 'sura.manager@gmail.com'
+            )
+          )
+          || (
+            // Dynamic bypass flag stored in user's restaurant profile
+            get(/databases/$(database)/documents/restaurantProfile/$(restaurantId)/users/$(request.auth.uid)).data.devBypass == true
+          )
+        );
+      }
+
+      // Helper to get subscription status. We treat missing subscription as expired.
+      function isSubscriptionActive() {
+        let sub = get(/databases/$(database)/documents/restaurantProfile/$(restaurantId)).data.subscription;
+        return sub != null && sub.currentPeriodEnd != null && request.time < sub.currentPeriodEnd;
+      }
       // Helper function to get user role for this restaurant
       function getUserRole(uid) {
         return get(/databases/$(database)/documents/restaurantProfile/$(restaurantId)/users/$(uid)).data.role;
@@ -20,7 +42,9 @@ service cloud.firestore {
       }
       
       // Restaurant profile document
-      allow read, write: if request.auth != null && belongsToRestaurant(request.auth.uid);
+      allow read: if request.auth != null && belongsToRestaurant(request.auth.uid);
+      // Writes require active subscription unless developer bypass
+      allow write: if request.auth != null && belongsToRestaurant(request.auth.uid) && (isDeveloperBypass() || isSubscriptionActive());
       
       // Users subcollection - users can read their own profile, owners can manage all
       match /users/{userId} {
@@ -37,18 +61,18 @@ service cloud.firestore {
         allow read: if request.auth != null && belongsToRestaurant(request.auth.uid);
         allow write: if request.auth != null && 
           belongsToRestaurant(request.auth.uid) && 
-          getUserRole(request.auth.uid) == 'owner';
+          getUserRole(request.auth.uid) == 'owner' && (isDeveloperBypass() || isSubscriptionActive());
       }
       
       // Bills - managers can create/update, owners can read all
       match /bills/{document} {
         allow create, update: if request.auth != null && 
           belongsToRestaurant(request.auth.uid) && 
-          getUserRole(request.auth.uid) == 'manager';
+          getUserRole(request.auth.uid) == 'manager' && (isDeveloperBypass() || isSubscriptionActive());
         allow read: if request.auth != null && belongsToRestaurant(request.auth.uid);
         allow delete: if request.auth != null && 
           belongsToRestaurant(request.auth.uid) && 
-          getUserRole(request.auth.uid) == 'owner';
+          getUserRole(request.auth.uid) == 'owner' && (isDeveloperBypass() || isSubscriptionActive());
       }
       
       // Staff - owners can CRUD, managers can read
@@ -56,7 +80,7 @@ service cloud.firestore {
         allow read: if request.auth != null && belongsToRestaurant(request.auth.uid);
         allow write: if request.auth != null && 
           belongsToRestaurant(request.auth.uid) && 
-          getUserRole(request.auth.uid) == 'owner';
+          getUserRole(request.auth.uid) == 'owner' && (isDeveloperBypass() || isSubscriptionActive());
       }
       
       // Expenses - owners can CRUD, managers can read
@@ -64,7 +88,7 @@ service cloud.firestore {
         allow read: if request.auth != null && belongsToRestaurant(request.auth.uid);
         allow write: if request.auth != null && 
           belongsToRestaurant(request.auth.uid) && 
-          getUserRole(request.auth.uid) == 'owner';
+          getUserRole(request.auth.uid) == 'owner' && (isDeveloperBypass() || isSubscriptionActive());
       }
     }
   }

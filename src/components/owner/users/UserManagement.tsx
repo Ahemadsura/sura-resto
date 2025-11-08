@@ -33,24 +33,9 @@ import {
   Person
 } from '@mui/icons-material';
 import RefreshButton from "../common/RefreshButton";
-import { 
-  updateDoc, 
-  doc 
-} from 'firebase/firestore';
-import { getFunctions, httpsCallable } from 'firebase/functions';
-import { db } from '../../../config/firebase';
-import { useAuth } from '../../../contexts/AuthContext';
-
-interface RestaurantUser {
-  id: string;
-  email: string;
-  displayName: string;
-  role: 'owner' | 'manager';
-  createdAt: Date;
-  lastLogin?: Date;
-  isActive: boolean;
-  createdBy: string;
-}
+import { useAuth } from '../../../contexts/SupabaseAuthContext';
+import { useSubscription } from '../../../contexts/SubscriptionContext';
+import { SupabaseUserService as UserManagementService, RestaurantUser, CreateManagerData } from '../../../lib/services/users/supabase';
 
 interface UserFormData {
   email: string;
@@ -76,8 +61,12 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, onRefreshUsers }
   const [loadingUserOperation, setLoadingUserOperation] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [emailError, setEmailError] = useState('');
+  const [passwordError, setPasswordError] = useState('');
+  const [nameError, setNameError] = useState('');
 
   const { currentUser } = useAuth();
+  const { status, isDeveloperBypass } = useSubscription();
 
   // Update local state when props change
   useEffect(() => {
@@ -89,12 +78,7 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, onRefreshUsers }
     try {
       if (!currentUser?.restaurantId) return;
       
-      // Update current user's isActive to true
-      await updateDoc(
-        doc(db, 'restaurantProfile', currentUser.restaurantId, 'users', currentUser.uid),
-        { isActive: true }
-      );
-      
+      await UserManagementService.fixOwnerStatus(currentUser.restaurantId);
       setSuccess('Owner status updated successfully!');
       onRefreshUsers();
     } catch (error) {
@@ -107,8 +91,23 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, onRefreshUsers }
     try {
       setLoadingUserOperation(true);
       
-      if (!userFormData.email || !userFormData.password || !userFormData.displayName) {
-        setError('Please fill in all required fields');
+      // Block when subscription is expired (unless developer bypass)
+      if (!isDeveloperBypass && status === 'expired') {
+        setError('Your subscription has expired. Please renew before adding managers.');
+        return;
+      }
+
+      // Field-level validation
+      const emailValidation = UserManagementService.validateEmail(userFormData.email.trim());
+      const passwordValidation = UserManagementService.validatePassword(userFormData.password);
+      const nameValidation = UserManagementService.validateDisplayName(userFormData.displayName);
+      
+      setEmailError(emailValidation.isValid ? '' : (emailValidation.error || 'Invalid email'));
+      setPasswordError(passwordValidation.isValid ? '' : (passwordValidation.error || 'Invalid password'));
+      setNameError(nameValidation.isValid ? '' : (nameValidation.error || 'Invalid name'));
+      
+      if (!emailValidation.isValid || !passwordValidation.isValid || !nameValidation.isValid) {
+        setError('Please fix the highlighted fields');
         return;
       }
 
@@ -131,65 +130,51 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, onRefreshUsers }
         return;
       }
 
-      // Call Cloud Function to create user
-      const functions = getFunctions();
-      const createManagerUser = httpsCallable(functions, 'createManagerUser');
-      
-      const result = await createManagerUser({
+      // Create manager using Supabase
+      const createManagerData: CreateManagerData = {
         email: userFormData.email,
         password: userFormData.password,
         displayName: userFormData.displayName
-      });
+      };
+
+      await UserManagementService.createManager(createManagerData, currentUser.restaurantId);
 
       setSuccess(`Manager ${userFormData.displayName} created successfully! They can now login with their credentials.`);
       setUserFormData({ email: '', password: '', displayName: '', role: 'manager' });
+      setEmailError('');
+      setPasswordError('');
+      setNameError('');
       setShowUserDialog(false);
       onRefreshUsers();
 
     } catch (error: any) {
       console.error('Error adding user:', error);
-      if (error.code === 'functions/already-exists') {
-        setError('A user with this email already exists');
-      } else if (error.code === 'functions/permission-denied') {
-        setError('You do not have permission to add managers');
-      } else if (error.code === 'functions/resource-exhausted') {
-        setError('Maximum limit of 2 managers reached. Please remove an existing manager before adding a new one.');
-      } else {
-        setError('Failed to add user: ' + (error.message || 'Unknown error'));
-      }
+      setError('Failed to add user: ' + (error.message || 'Unknown error'));
     } finally {
       setLoadingUserOperation(false);
     }
   };
 
+  const isFormValid = () => {
+    const e = UserManagementService.validateEmail(userFormData.email.trim()).isValid;
+    const p = UserManagementService.validatePassword(userFormData.password).isValid;
+    const n = UserManagementService.validateDisplayName(userFormData.displayName).isValid;
+    return e && p && n && !emailError && !passwordError && !nameError;
+  };
+
   const handleToggleUserStatus = async (userId: string, currentStatus: boolean) => {
     try {
-      // If trying to activate a manager, check the limit first
-      if (!currentStatus) {
-        const activeManagers = restaurantUsers.filter(user => user.role === 'manager' && user.isActive);
-        if (activeManagers.length >= 2) {
-          setError('Maximum limit of 2 active managers reached. Please deactivate an existing manager before activating this one.');
-          return;
-        }
+      if (!currentUser?.restaurantId) {
+        setError('Restaurant ID not found');
+        return;
       }
 
-      const functions = getFunctions();
-      const toggleManagerStatus = httpsCallable(functions, 'toggleManagerStatus');
-      
-      await toggleManagerStatus({
-        userId: userId,
-        isActive: !currentStatus
-      });
-      
+      await UserManagementService.toggleManagerStatus(userId, !currentStatus, currentUser.restaurantId);
       setSuccess(`User ${!currentStatus ? 'activated' : 'deactivated'} successfully`);
       onRefreshUsers();
     } catch (error: any) {
       console.error('Error updating user status:', error);
-      if (error.code === 'functions/resource-exhausted') {
-        setError('Maximum limit of 2 active managers reached. Please deactivate an existing manager before activating this one.');
-      } else {
       setError('Failed to update user status: ' + (error.message || 'Unknown error'));
-      }
     }
   };
 
@@ -199,10 +184,12 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, onRefreshUsers }
     }
 
     try {
-      const functions = getFunctions();
-      const removeManagerUser = httpsCallable(functions, 'removeManagerUser');
-      
-      await removeManagerUser({ userId: userId });
+      if (!currentUser?.restaurantId) {
+        setError('Restaurant ID not found');
+        return;
+      }
+
+      await UserManagementService.removeManager(userId, currentUser.restaurantId);
       setSuccess(`${userName} removed successfully`);
       onRefreshUsers();
     } catch (error: any) {
@@ -455,6 +442,8 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, onRefreshUsers }
                 onChange={e => setUserFormData({ ...userFormData, displayName: e.target.value })}
                 fullWidth
                 required
+                error={!!nameError}
+                helperText={nameError || "2–50 chars; letters, numbers, spaces, hyphens, apostrophes"}
                 InputProps={{ startAdornment: <InputAdornment position="start">👤</InputAdornment> }}
                 sx={{ bgcolor: '#f8f9fa', borderRadius: 2 }}
               />
@@ -465,6 +454,8 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, onRefreshUsers }
                 onChange={e => setUserFormData({ ...userFormData, email: e.target.value })}
                 fullWidth
                 required
+                error={!!emailError}
+                helperText={emailError || "Enter a valid email not already in use"}
                 InputProps={{ startAdornment: <InputAdornment position="start">✉️</InputAdornment> }}
                 sx={{ bgcolor: '#f8f9fa', borderRadius: 2 }}
               />
@@ -475,6 +466,8 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, onRefreshUsers }
                 onChange={e => setUserFormData({ ...userFormData, password: e.target.value })}
                 fullWidth
                 required
+                error={!!passwordError}
+                helperText={passwordError || "Min 8 chars incl. upper, lower, number, special"}
                 InputProps={{ startAdornment: <InputAdornment position="start">🔒</InputAdornment> }}
                 sx={{ bgcolor: '#f8f9fa', borderRadius: 2 }}
               />
@@ -498,7 +491,7 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, onRefreshUsers }
           <Button 
             onClick={handleAddUser} 
             variant="contained" 
-            disabled={loadingUserOperation}
+            disabled={loadingUserOperation || !isFormValid()}
             sx={{ bgcolor: '#6A1B9A', color: 'white', fontWeight: 'bold', px: 3, py: 1, fontSize: '1rem', borderRadius: 2, boxShadow: '0 4px 16px rgba(106, 27, 154, 0.18)', '&:hover': { bgcolor: '#4A148C' } }}
           >
             {loadingUserOperation ? 'Adding...' : 'Add Manager'}

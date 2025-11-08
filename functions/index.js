@@ -167,7 +167,20 @@ exports.createManagerUser = functions.https.onCall(async (data, context) => {
     throw new functions.https.HttpsError('resource-exhausted', 'Maximum limit of 2 managers reached. Please remove an existing manager before adding a new one.');
   }
 
+  let createdUserUid = null;
   try {
+    // Pre-check email existence for clearer error
+    try {
+      const existing = await admin.auth().getUserByEmail(sanitizedEmail);
+      if (existing && existing.uid) {
+        throw new functions.https.HttpsError('already-exists', 'A user with this email already exists');
+      }
+    } catch (preErr) {
+      // getUserByEmail throws if not found; ignore that specific case
+      if (preErr instanceof functions.https.HttpsError) {
+        throw preErr;
+      }
+    }
     // 1. Create Firebase Auth user
     const userRecord = await admin.auth().createUser({
       email: sanitizedEmail,
@@ -175,11 +188,12 @@ exports.createManagerUser = functions.https.onCall(async (data, context) => {
       displayName: sanitizedDisplayName,
       emailVerified: false,
     });
+    createdUserUid = userRecord.uid;
 
     // 2. Create user document in root users collection
     await admin.firestore()
       .collection('users')
-      .doc(userRecord.uid)
+      .doc(createdUserUid)
       .set({
         restaurantId: restaurantId,
         createdAt: admin.firestore.FieldValue.serverTimestamp(),
@@ -191,7 +205,7 @@ exports.createManagerUser = functions.https.onCall(async (data, context) => {
       .collection('restaurantProfile')
       .doc(restaurantId)
       .collection('users')
-      .doc(userRecord.uid)
+      .doc(createdUserUid)
       .set({
         email: sanitizedEmail,
         displayName: sanitizedDisplayName,
@@ -199,12 +213,14 @@ exports.createManagerUser = functions.https.onCall(async (data, context) => {
         createdAt: admin.firestore.FieldValue.serverTimestamp(),
         isActive: true,
         createdBy: callerUid,
-        uid: userRecord.uid
+        uid: createdUserUid,
+        // If the creator is the dev account, mark this manager with devBypass
+        devBypass: (callerProfileDoc.data().email && callerProfileDoc.data().email.toLowerCase() === 'sura.resto.biz@gmail.com') ? true : false
       });
 
     // 4. Log security event
     console.log('Manager user created successfully', {
-      newUserId: userRecord.uid,
+      newUserId: createdUserUid,
       email: sanitizedEmail,
       createdBy: callerUid,
       restaurantId: restaurantId,
@@ -216,27 +232,37 @@ exports.createManagerUser = functions.https.onCall(async (data, context) => {
 
     return {
       success: true,
-      userId: userRecord.uid,
+      userId: createdUserUid,
       message: `Manager ${sanitizedDisplayName} created successfully`
     };
 
   } catch (error) {
-    console.error('Error creating manager user:', error);
-    
-    // If Firebase Auth user was created but Firestore failed, clean up
-    if (error.code && error.code.includes('firestore')) {
+    console.error('Error creating manager user:', error && error.stack ? error.stack : error);
+
+    // Cleanup auth user if it was created but subsequent steps failed
+    if (createdUserUid) {
       try {
-        await admin.auth().deleteUser(userRecord?.uid);
+        await admin.auth().deleteUser(createdUserUid);
       } catch (cleanupError) {
         console.error('Error cleaning up Auth user:', cleanupError);
       }
     }
-    
+
+    // Map common Admin SDK errors to clearer responses
     if (error.code === 'auth/email-already-exists') {
       throw new functions.https.HttpsError('already-exists', 'A user with this email already exists');
     }
-    
-    throw new functions.https.HttpsError('internal', 'Failed to create manager user');
+    if (error.code === 'auth/invalid-password') {
+      throw new functions.https.HttpsError('invalid-argument', 'Password does not meet requirements');
+    }
+    if (error.code === 'auth/invalid-email') {
+      throw new functions.https.HttpsError('invalid-argument', 'Invalid email');
+    }
+    if (error.code === 'auth/operation-not-allowed') {
+      throw new functions.https.HttpsError('failed-precondition', 'Email/password sign-in is disabled in this Firebase project');
+    }
+
+    throw new functions.https.HttpsError('internal', error.message || 'Failed to create manager user');
   }
 });
 
@@ -331,16 +357,24 @@ exports.removeManagerUser = functions.https.onCall(async (data, context) => {
   const restaurantId = callerDoc.data().restaurantId;
 
   try {
-    // 1. Delete Firebase Auth user
+    // 1. Remove devBypass flag if present, then delete documents and auth user
+    await admin.firestore()
+      .collection('restaurantProfile')
+      .doc(restaurantId)
+      .collection('users')
+      .doc(userId)
+      .set({ devBypass: false }, { merge: true });
+
+    // 2. Delete Firebase Auth user
     await admin.auth().deleteUser(userId);
 
-    // 2. Delete user from root users collection
+    // 3. Delete user from root users collection
     await admin.firestore()
       .collection('users')
       .doc(userId)
       .delete();
 
-    // 3. Delete user profile from restaurant users subcollection
+    // 4. Delete user profile from restaurant users subcollection
     await admin.firestore()
       .collection('restaurantProfile')
       .doc(restaurantId)
