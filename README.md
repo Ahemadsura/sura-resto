@@ -1,4 +1,4 @@
-# SURA-Resto - Restaurant AI Agent System
+# SURA-Resto — Restaurant POS & Billing System
 
 A comprehensive restaurant management system built with React, TypeScript, Firebase, and Material UI.
 
